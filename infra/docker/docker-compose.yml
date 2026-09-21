@@ -1,0 +1,51 @@
+name: jogafacil
+
+# Ambiente local: LocalStack (DynamoDB) + os dois servicos.
+# Uso: docker compose -f infra/docker/docker-compose.yml up -d --build
+services:
+
+  localstack:
+    image: localstack/localstack:3.7.2
+    container_name: jogafacil-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=dynamodb
+      - DEBUG=0
+    volumes:
+      # Scripts em ready.d rodam automaticamente quando o LocalStack fica pronto.
+      - ../localstack/init:/etc/localstack/init/ready.d:ro
+
+  reservation-service:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+      args:
+        SERVICE: reservation-service
+    container_name: jogafacil-reservation-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      AWS_REGION: us-east-1
+      AWS_DYNAMODB_ENDPOINT: http://localstack:4566
+    depends_on:
+      - localstack
+
+  match-service:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+      args:
+        SERVICE: match-service
+    container_name: jogafacil-match-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      AWS_REGION: us-east-1
+      AWS_DYNAMODB_ENDPOINT: http://localstack:4566
+      # Nome logico do reservation-service dentro da rede do Compose.
+      RESERVATION_SERVICE_URL: http://reservation-service:8081
+    depends_on:
+      - localstack
