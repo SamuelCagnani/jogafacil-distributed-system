@@ -2,6 +2,6 @@
 # rodando na mesma maquina (porta 8081).
 aws:
   dynamodb:
-    endpoint: http://localhost:4566
+    endpoint: ${AWS_DYNAMODB_ENDPOINT:http://localhost:4566}
   access-key-id: test
   secret-access-key: test

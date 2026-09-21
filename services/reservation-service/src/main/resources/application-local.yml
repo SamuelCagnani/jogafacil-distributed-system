@@ -2,6 +2,6 @@
 # Suba a infraestrutura com: docker compose -f infra/docker/docker-compose.yml up -d
 aws:
   dynamodb:
-    endpoint: http://localhost:4566
+    endpoint: ${AWS_DYNAMODB_ENDPOINT:http://localhost:4566}
   access-key-id: test
   secret-access-key: test
