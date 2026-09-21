@@ -1,0 +1,3 @@
+# Perfil aws (default): sem endpoint customizado e sem credenciais fixas.
+# A task role do ECS Fargate e usada e a URL do reservation-service aponta
+# para o nome logico registrado no Cloud Map (variavel RESERVATION_SERVICE_URL).

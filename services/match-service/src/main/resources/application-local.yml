@@ -1,0 +1,7 @@
+# Perfil local: usa o LocalStack no lugar da AWS e o reservation-service
+# rodando na mesma maquina (porta 8081).
+aws:
+  dynamodb:
+    endpoint: http://localhost:4566
+  access-key-id: test
+  secret-access-key: test
