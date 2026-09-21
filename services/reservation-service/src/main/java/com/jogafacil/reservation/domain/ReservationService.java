@@ -76,15 +76,23 @@ public class ReservationService {
                 Instant.now(),
                 null);
 
-        if (!repository.saveIfSlotFree(reservation)) {
+        try {
+            if (!repository.saveIfSlotFree(reservation)) {
+                idempotencyStore.release(operationId);
+                throw ApiException.conflict(ProblemCode.RESERVATION_CONFLICT,
+                        "Court slot is no longer available.");
+            }
+            ReservationResponse body = ReservationResponse.from(reservation);
+            idempotencyStore.complete(operationId, HttpStatus.CREATED.value(), write(body));
+            return new ReservationResult(HttpStatus.CREATED.value(), body);
+        } catch (ApiException conflict) {
+            throw conflict;
+        } catch (RuntimeException unexpected) {
+            // Falha inesperada (ex.: DynamoDB indisponivel): libera a chave para
+            // que o cliente possa tentar novamente com a mesma Idempotency-Key.
             idempotencyStore.release(operationId);
-            throw ApiException.conflict(ProblemCode.RESERVATION_CONFLICT,
-                    "Court slot is no longer available.");
+            throw unexpected;
         }
-
-        ReservationResponse body = ReservationResponse.from(reservation);
-        idempotencyStore.complete(operationId, HttpStatus.CREATED.value(), write(body));
-        return new ReservationResult(HttpStatus.CREATED.value(), body);
     }
 
     public Reservation get(String reservationId) {

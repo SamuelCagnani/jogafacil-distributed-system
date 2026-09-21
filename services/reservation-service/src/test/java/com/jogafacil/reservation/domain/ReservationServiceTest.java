@@ -117,4 +117,16 @@ class ReservationServiceTest {
         verify(idempotencyStore).release(OPERATION_ID);
         verify(idempotencyStore, never()).complete(anyString(), any(Integer.class), anyString());
     }
+
+    @Test
+    void releasesTheKeyWhenAnUnexpectedFailureHappens() {
+        when(idempotencyStore.find(OPERATION_ID)).thenReturn(Optional.empty());
+        when(idempotencyStore.claim(eq(OPERATION_ID), anyString())).thenReturn(true);
+        when(repository.saveIfSlotFree(any())).thenThrow(new RuntimeException("dynamodb unavailable"));
+
+        assertThatThrownBy(() -> service.create(OPERATION_ID, request))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(idempotencyStore).release(OPERATION_ID);
+    }
 }

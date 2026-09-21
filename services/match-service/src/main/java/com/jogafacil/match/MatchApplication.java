@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * chamada REST sincrona, demonstrando a comunicacao entre processos desta
  * entrega.</p>
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.jogafacil.match", "com.jogafacil.contracts"})
 @EnableConfigurationProperties(MatchProperties.class)
 public class MatchApplication {
 

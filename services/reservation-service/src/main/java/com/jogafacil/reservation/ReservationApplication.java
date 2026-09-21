@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * unicidade de {@code (courtId, slotId)} e garantida por escrita condicional no
  * DynamoDB, e as requisicoes de criacao sao idempotentes por {@code Idempotency-Key}.</p>
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.jogafacil.reservation", "com.jogafacil.contracts"})
 @EnableConfigurationProperties(ReservationProperties.class)
 public class ReservationApplication {
 
