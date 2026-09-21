@@ -8,6 +8,9 @@ O projeto também é o trabalho da disciplina de **Sistemas Distribuídos**. O
 estado atual corresponde à **Entrega 2 — Primeiros Módulos e Comunicação**.
 
 > Documento detalhado da entrega: [`docs/entrega-2.md`](docs/entrega-2.md)
+>
+> Comandos de subir/descer e controle de custo:
+> [`docs/guia-operacao.md`](docs/guia-operacao.md) e `./scripts/aws-audit.sh`
 
 ---
 
