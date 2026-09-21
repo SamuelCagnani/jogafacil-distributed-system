@@ -1,0 +1,383 @@
+openapi: 3.1.0
+info:
+  title: JogaFácil Concurrency-Critical Interfaces
+  version: 1.0.0
+  description: |
+    Versioned contracts for the concurrency-critical reservation and
+    match-participation interfaces defined by feature
+    `001-contracts-and-concurrency`.
+
+    Versioning is negotiated through the media type
+    `application/vnd.jogafacil.v1+json`. Every state-changing request MUST
+    carry an `Idempotency-Key` header; retries with the same key replay the
+    original outcome.
+servers:
+  - url: https://api.jogafacil.example.com
+    description: Production (API Gateway)
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Reservations
+    description: Court time-slot reservations (reservation-service)
+  - name: Participations
+    description: Match spots / vacancies (match-service)
+
+paths:
+  /reservations:
+    post:
+      tags: [Reservations]
+      operationId: createReservation
+      summary: Reserve a court time slot
+      description: |
+        Creates a reservation for a unique `(courtId, slotId)` pair. At most
+        one concurrent attempt can be confirmed; all others receive 409
+        `RESERVATION_CONFLICT`. The match reference is optional.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/vnd.jogafacil.v1+json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreateRequest'
+      responses:
+        '201':
+          description: Reservation confirmed
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '200':
+          description: Idempotent replay of a previous confirmation
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The slot is already reserved or was taken concurrently
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://jogafacil.example.com/problems/conflict
+                title: Reservation conflict
+                status: 409
+                detail: Court slot is no longer available.
+                instance: /reservations
+                code: RESERVATION_CONFLICT
+                correlationId: 8f1c2a6e-5d3b-4a1e-9c77-1f0d2b7a9e11
+                timestamp: '2026-09-18T20:00:00.123Z'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /reservations/{reservationId}:
+    delete:
+      tags: [Reservations]
+      operationId: cancelReservation
+      summary: Cancel a reservation
+      description: |
+        Cancels the reservation and atomically releases its slot. Idempotent:
+        cancelling an already-cancelled reservation returns the current state.
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Reservation cancelled (or already cancelled)
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /matches/{matchId}/participations:
+    post:
+      tags: [Participations]
+      operationId: joinMatch
+      summary: Join a match and occupy a spot
+      description: |
+        Occupies one spot in the match. If no spot remains, the request fails
+        with 409 `MATCH_FULL`; the participant count never exceeds the
+        configured maximum. Repeated calls with the same idempotency key
+        return the original outcome.
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/vnd.jogafacil.v1+json:
+            schema:
+              $ref: '#/components/schemas/JoinMatchRequest'
+      responses:
+        '201':
+          description: Participation confirmed
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Participation'
+        '200':
+          description: Idempotent replay of a previous confirmation
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Participation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The match is full or no longer open
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                full:
+                  value:
+                    type: https://jogafacil.example.com/problems/conflict
+                    title: Match is full
+                    status: 409
+                    detail: No spots remain for this match.
+                    instance: /matches/match_01J8Z9W2K3/participations
+                    code: MATCH_FULL
+                    correlationId: 8f1c2a6e-5d3b-4a1e-9c77-1f0d2b7a9e11
+                    timestamp: '2026-09-18T20:00:00.123Z'
+                not-open:
+                  value:
+                    type: https://jogafacil.example.com/problems/conflict
+                    title: Match is not open
+                    status: 409
+                    detail: The match is not accepting participants.
+                    instance: /matches/match_01J8Z9W2K3/participations
+                    code: MATCH_NOT_OPEN
+                    correlationId: 8f1c2a6e-5d3b-4a1e-9c77-1f0d2b7a9e11
+                    timestamp: '2026-09-18T20:00:00.123Z'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /matches/{matchId}/participations/{playerId}:
+    delete:
+      tags: [Participations]
+      operationId: leaveMatch
+      summary: Leave a match and release a spot
+      description: |
+        Releases the player's spot atomically. Idempotent: leaving an
+        already-left match returns the current state.
+      parameters:
+        - $ref: '#/components/parameters/MatchId'
+        - $ref: '#/components/parameters/PlayerId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Spot released (or already released)
+          content:
+            application/vnd.jogafacil.v1+json:
+              schema:
+                $ref: '#/components/schemas/Participation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated operation identifier enabling idempotent retries.
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: '^[A-Za-z0-9_.:-]+$'
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^res_[0-9A-HJKMNP-TV-Z]{26}$'
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^match_[0-9A-HJKMNP-TV-Z]{26}$'
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^usr_[0-9A-HJKMNP-TV-Z]{26}$'
+
+  responses:
+    BadRequest:
+      description: Malformed request
+      content:
+        application/vnd.jogafacil.v1+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/vnd.jogafacil.v1+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Caller is not allowed to perform the operation
+      content:
+        application/vnd.jogafacil.v1+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Referenced court, slot, match or reservation does not exist
+      content:
+        application/vnd.jogafacil.v1+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableEntity:
+      description: Request is well-formed but violates a business rule (e.g. idempotency key reuse with a different payload)
+      content:
+        application/vnd.jogafacil.v1+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    ReservationCreateRequest:
+      type: object
+      required: [courtId, slotId]
+      properties:
+        courtId:
+          type: string
+          pattern: '^court_[0-9A-HJKMNP-TV-Z]{26}$'
+        slotId:
+          type: string
+          pattern: '^slot_[0-9A-HJKMNP-TV-Z]{26}$'
+        matchId:
+          type: string
+          nullable: true
+          pattern: '^match_[0-9A-HJKMNP-TV-Z]{26}$'
+          description: Optional match this reservation supports.
+      additionalProperties: false
+
+    Reservation:
+      type: object
+      required: [reservationId, courtId, slotId, ownerId, status, createdAt]
+      properties:
+        reservationId:
+          type: string
+          pattern: '^res_[0-9A-HJKMNP-TV-Z]{26}$'
+        courtId:
+          type: string
+        slotId:
+          type: string
+        ownerId:
+          type: string
+        matchId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, CANCELLED]
+        createdAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    JoinMatchRequest:
+      type: object
+      properties:
+        playerId:
+          type: string
+          description: Defaults to the authenticated caller when omitted.
+      additionalProperties: false
+
+    Participation:
+      type: object
+      required: [participationId, matchId, playerId, status, joinedAt]
+      properties:
+        participationId:
+          type: string
+          pattern: '^part_[0-9A-HJKMNP-TV-Z]{26}$'
+        matchId:
+          type: string
+        playerId:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, LEFT]
+        joinedAt:
+          type: string
+          format: date-time
+        leftAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Problem:
+      type: object
+      required: [type, title, status, code, timestamp]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          enum:
+            - RESERVATION_CONFLICT
+            - MATCH_FULL
+            - MATCH_NOT_OPEN
+            - IDEMPOTENCY_KEY_REUSED
+            - VALIDATION_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+          description: Machine-readable domain error code.
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

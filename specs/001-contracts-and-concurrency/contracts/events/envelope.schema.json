@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jogafacil.example.com/schemas/event-envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Canonical envelope attached to every JogaFácil domain event. No event may be published unless all required fields are present.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "type",
+    "timestamp",
+    "service_id",
+    "logical_clock",
+    "schema_version",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Globally unique event identifier; consumer dedup key."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "MATCH_CREATED",
+        "MATCH_UPDATED",
+        "MATCH_FULL",
+        "MATCH_CANCELLED",
+        "RESERVATION_CREATED",
+        "RESERVATION_CANCELLED"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC instant, ISO-8601, millisecond precision."
+    },
+    "service_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Logical name of the producing service, e.g. reservation-service."
+    },
+    "logical_clock": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic Lamport clock value of the producing instance."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Payload schema version."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates events belonging to the same flow/request."
+    },
+    "causation_id": {
+      "type": "string",
+      "pattern": "^evt_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "event_id of the event that directly caused this one."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Type-specific body; see domain-events.md."
+    }
+  }
+}
