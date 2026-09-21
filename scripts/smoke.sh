@@ -54,9 +54,13 @@ create_match() {
     -d "{\"courtId\":\"$COURT_ID\",\"slotId\":\"$SLOT_ID\",\"organizerId\":\"$ORGANIZER_ID\",\"maxParticipants\":10}"
 }
 
-echo "== Aguardando servicos =="
-wait_for_health "reservation-service" "$RESERVATION_URL"
-wait_for_health "match-service" "$MATCH_URL"
+if [ "${SKIP_HEALTH_WAIT:-0}" != "1" ]; then
+  echo "== Aguardando servicos =="
+  wait_for_health "reservation-service" "$RESERVATION_URL"
+  wait_for_health "match-service" "$MATCH_URL"
+else
+  echo "== Espera de health ignorada (SKIP_HEALTH_WAIT=1) =="
+fi
 
 echo "== 1. POST /matches cria a partida e reserva o horario =="
 STATUS=""
