@@ -1,0 +1,12 @@
+# Arquivos que nao entram no contexto de build da imagem Docker.
+.git
+.gitignore
+**/target
+aws
+awscliv2.zip
+**/*.pdf
+specs
+.specify
+.github
+docs
+*.md
