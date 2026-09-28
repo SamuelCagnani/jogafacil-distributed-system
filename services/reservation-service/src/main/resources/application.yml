@@ -1,0 +1,25 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: reservation-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+
+jogafacil:
+  reservation-table: ${RESERVATION_TABLE:jogafacil-reservations}
+  idempotency-table: ${IDEMPOTENCY_TABLE:jogafacil-idempotency}
+  reservation-id-index: byReservationId
+  # Dono provisorio ate a autenticacao entrar na Entrega 4.
+  default-owner-id: usr_00000000000000000000000000

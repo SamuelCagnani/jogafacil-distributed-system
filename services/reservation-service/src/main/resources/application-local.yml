@@ -1,0 +1,7 @@
+# Perfil local: usa o LocalStack no lugar da AWS.
+# Suba a infraestrutura com: docker compose -f infra/docker/docker-compose.yml up -d
+aws:
+  dynamodb:
+    endpoint: ${AWS_DYNAMODB_ENDPOINT:http://localhost:4566}
+  access-key-id: test
+  secret-access-key: test

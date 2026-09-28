@@ -1,0 +1,2 @@
+# Perfil aws (default): sem endpoint customizado e sem credenciais fixas.
+# O DefaultCredentialsProvider usa a task role do ECS Fargate.
