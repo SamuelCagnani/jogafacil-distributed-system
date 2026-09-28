@@ -1,5 +1,5 @@
 # Security groups.
-#  - alb: aceita HTTP (80) da internet.
+#  - alb:a aceita HTTP (80) da internet.
 #  - service: aceita trafego do ALB e entre as proprias tasks (match acessa o
 #    reservation-service pelo Cloud Map na porta 8081).
 
