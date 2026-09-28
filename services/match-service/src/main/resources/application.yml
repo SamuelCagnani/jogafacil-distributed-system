@@ -1,0 +1,24 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: match-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+
+jogafacil:
+  match-table: ${MATCH_TABLE:jogafacil-matches}
+  # Na AWS, a variavel RESERVATION_SERVICE_URL aponta para o nome logico
+  # do servico descoberto via Cloud Map (sem IP fixo).
+  reservation-service-base-url: ${RESERVATION_SERVICE_URL:http://localhost:8081}
